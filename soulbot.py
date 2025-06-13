@@ -38,6 +38,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_text = update.message.text
     system_prompt = get_prompt_type(user_text)
 
+    logger.info(f"📥 Received message: {user_text}")
+    logger.info(f"🧠 Using system prompt: {system_prompt}")
+
     try:
         completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -47,24 +50,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             ],
             temperature=0.85
         )
+
         reply = completion.choices[0].message.content
+        logger.info(f"📤 GPT Reply: {reply}")
         await update.message.reply_text(reply)
-    except Exception as e:
-        await update.message.reply_text("عذرًا… حدث خلل مؤقت في الاتصال بالذكاء الاصطناعي. حاول مرة أخرى لاحقًا.")
-        logger.error(f"خطأ في GPT: {e}")
 
-# التشغيل
-def main() -> None:
-    if not TELEGRAM_TOKEN or not OPENAI_KEY:
-        raise ValueError("❌ تأكد من وجود TELEGRAM_BOT_TOKEN و OPENAI_API_KEY في متغيرات البيئة.")
-    
-    application = Application.builder().token(TELEGRAM_TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.run_polling()
-
-if __name__ == "__main__":
-    try:
-        main()
     except Exception as e:
-        print(f"🚨 خطأ غير متوقع أثناء تشغيل البوت: {e}")
+        error_message = f"🚨 GPT Error: {e}"
+        logger.error(error_message)
+        await update.message.reply_text("عذرًا… حصل خطأ أثناء توليد الرد من الذكاء الاصطناعي.")
