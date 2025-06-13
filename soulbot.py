@@ -1,75 +1,51 @@
 import logging
 import os
-import openai
+import requests
 from telegram import Update, ForceReply
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
-# تسجيل تفصيلي يظهر في Railway logs
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
-# مفاتيح البيئة
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = OPENAI_KEY
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+MODEL = "openrouter/gpt-3.5-turbo"
 
-# تصنيف نوع الرسالة
-def get_prompt_type(text: str) -> str:
-    text = text.lower()
-    if "فضفضة" in text or "أبوح" in text:
-        return "أنت رفيق عاطفي يستمع دون أن يحكم. كن حنونًا ومتفهمًا."
-    elif "استشارة" in text or "رأيك" in text:
-        return "كن تحليليًا وعقلانيًا، اعطِ رأيك كخبير محترم."
-    elif "تحفيز" in text or "يأس" in text:
-        return "كن مشجعًا وداعمًا كأفضل صديق."
-    else:
-        return "كن رفيقًا ذكيًا، استمع ورد بلطف دون أحكام."
-
-# /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.info("✅ استقبل أمر /start")
-    await update.message.reply_text("مرحبًا بك، أنا Shinjo Soul GPT – رفيقك العاطفي. أرسل لي أي شيء 💜")
+    user = update.effective_user
+    await update.message.reply_html(
+        f"مرحباً {user.first_name}! 💜\n\nأنا شينچو سول – النسخة المجانية، جاهز أسمعك وأرد عليك. اكتب لي أي شيء الآن 🕊️",
+        reply_markup=ForceReply(selective=True),
+    )
 
-# الرد على الرسائل
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_text = update.message.text
-    logger.info(f"📥 Received: {user_text}")
-    print(f"📥 User message: {user_text}")
-
-    system_prompt = get_prompt_type(user_text)
-    logger.info(f"🧠 Prompt type: {system_prompt}")
+    user_message = update.message.text
 
     try:
-        completion = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_text}
-            ],
-            temperature=0.7
-        )
-        reply = completion.choices[0].message.content
-        logger.info(f"📤 GPT reply: {reply}")
-        print(f"📤 GPT: {reply}")
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": MODEL,
+            "messages": [
+                {"role": "system", "content": "كن رفيقًا ذكيًا يستمع بلطف ويدعم المشاعر الإنسانية."},
+                {"role": "user", "content": user_message}
+            ]
+        }
+        response = requests.post(OPENROUTER_ENDPOINT, headers=headers, json=payload)
+        data = response.json()
+        reply = data['choices'][0]['message']['content']
         await update.message.reply_text(reply)
 
     except Exception as e:
-        logger.exception("🚨 GPT Error:")
-        await update.message.reply_text("⚠️ عذرًا، حدث خلل لحظي. حاول لاحقًا.")
+        await update.message.reply_text("⚠️ حدث خطأ أثناء الاتصال بـ OpenRouter. تأكد من التوكن أو حاول لاحقًا.")
+        print("❌ ERROR:", e)
 
-# تشغيل البوت
 def main():
-    if not TELEGRAM_TOKEN or not OPENAI_KEY:
-        raise ValueError("❌ لم يتم العثور على TELEGRAM_BOT_TOKEN أو OPENAI_API_KEY")
-
+    if not TELEGRAM_TOKEN or not OPENROUTER_API_KEY:
+        raise ValueError("❌ تأكد من وجود TELEGRAM_BOT_TOKEN و OPENROUTER_API_KEY في متغيرات البيئة.")
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    print("✅ ShinjoSoulGPT_V2 is running and ready to receive messages.")
-    logger.info("🚀 ShinjoSoulGPT_V2 launched.")
     app.run_polling()
 
 if __name__ == "__main__":
