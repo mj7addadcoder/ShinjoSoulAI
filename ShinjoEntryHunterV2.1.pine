@@ -1,0 +1,40 @@
+
+//@version=5
+indicator("Shinjo Entry Hunter V2.1", overlay=true)
+
+// ====== الإعدادات ======
+showBuySell = input.bool(true, "عرض إشارات Buy/Sell")
+showStrongSignals = input.bool(true, "عرض إشارات 🚀 و ⚡")
+showTrendLine = input.bool(true, "عرض خط الترند")
+showSupportResistance = input.bool(true, "عرض الدعم والمقاومة")
+
+// ====== حساب المتوسطات ======
+emaFast = ta.ema(close, 9)
+emaSlow = ta.ema(close, 21)
+trendColor = emaFast > emaSlow ? color.green : color.red
+
+// ====== إشارات الدخول البسيطة ======
+buySignal = ta.crossover(emaFast, emaSlow)
+sellSignal = ta.crossunder(emaFast, emaSlow)
+
+plotshape(showBuySell and buySignal, title="Buy", location=location.belowbar, color=color.green, style=shape.labelup, text="Buy")
+plotshape(showBuySell and sellSignal, title="Sell", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell")
+
+// ====== إشارات قوية 🚀 و ⚡ ======
+strongBuy = buySignal and close > emaFast and volume > ta.sma(volume, 20)
+strongSell = sellSignal and close < emaFast and volume > ta.sma(volume, 20)
+
+plotshape(showStrongSignals and strongBuy, title="🚀 Strong Buy", location=location.belowbar, color=color.lime, style=shape.triangleup, size=size.small, text="🚀")
+plotshape(showStrongSignals and strongSell, title="⚡ Strong Sell", location=location.abovebar, color=color.fuchsia, style=shape.triangledown, size=size.small, text="⚡")
+
+// ====== خط الترند ======
+plot(showTrendLine ? emaSlow : na, title="Trend Line", color=trendColor, linewidth=2)
+
+// ====== دعم ومقاومة ======
+pivotHigh = ta.pivothigh(high, 5, 5)
+pivotLow = ta.pivotlow(low, 5, 5)
+resistance = na(pivotHigh) ? na : high[5]
+support = na(pivotLow) ? na : low[5]
+
+plot(showSupportResistance ? resistance : na, title="Resistance", color=color.red, linewidth=1, style=plot.style_linebr)
+plot(showSupportResistance ? support : na, title="Support", color=color.green, linewidth=1, style=plot.style_linebr)
