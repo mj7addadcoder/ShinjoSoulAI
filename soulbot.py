@@ -35,10 +35,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 # الردود التفاعلية
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_text = update.message.text
-    system_prompt = get_prompt_type(user_text)
-    logger.info(f"📥 Received: {user_text}")
     try:
+        user_text = update.message.text
+        logger.info(f"📥 Received message: {user_text}")
+        system_prompt = get_prompt_type(user_text)
+
         completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -48,11 +49,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             temperature=0.85
         )
         reply = completion.choices[0].message.content
-        logger.info(f"📤 Reply: {reply}")
+        logger.info(f"📤 GPT reply: {reply}")
         await update.message.reply_text(reply)
     except Exception as e:
-        logger.exception("🚨 GPT Failed to respond:")
-        await update.message.reply_text("عذرًا، حصل خلل لحظي... أعد المحاولة 💜")
+        logger.exception("🚨 Unhandled error in handle_message:")
+        await update.message.reply_text("🚧 عذرًا، حصل خلل أثناء الرد. حاول مجددًا بعد قليل.")
 
 # التشغيل
 def main() -> None:
@@ -70,4 +71,4 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f"🚨 Unexpected error: {e}")
+        print(f"🚨 Fatal error: {e}")
