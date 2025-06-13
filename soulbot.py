@@ -4,18 +4,18 @@ import openai
 from telegram import Update, ForceReply
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
-# تفعيل سجل التشغيل
+# إعداد السجل
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# إعداد مفاتيح API
-TELEGRAM_TOKEN = os.getenv("8091089486:AAFVTzoOkTHBh9vUKHraUQ9LCOF9il799Ok")
-OPENAI_KEY = os.getenv("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")
+# جلب المفاتيح من البيئة
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = OPENAI_KEY
 
-# موجهات (Prompts) مخصصة حسب نوع الرسالة
+# تصنيف البرومبت
 def get_prompt_type(text: str) -> str:
     text = text.lower()
     if "فضفضة" in text or "أبوح" in text or "تعبان" in text:
@@ -27,13 +27,13 @@ def get_prompt_type(text: str) -> str:
     else:
         return "كن رفيقًا ذكيًا، استمع ورد بلطف دون أحكام."
 
-# أمر /start
+# أمر البدء
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     welcome_text = f"مرحباً {user.first_name}! 💜\n\nأنا شينچو سول – GPT، رفيقك الذكي والداعم النفسي. فضفضلي، استشرني، أو فقط اطلب كلمة تحفيزية… وسأكون هنا لأجلك.\n\nاكتب لي أي شيء الآن 💌"
     await update.message.reply_html(welcome_text, reply_markup=ForceReply(selective=True))
 
-# الرد على الرسائل
+# الردود التفاعلية
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_text = update.message.text
     system_prompt = get_prompt_type(user_text)
@@ -49,12 +49,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         reply = completion.choices[0].message.content
         await update.message.reply_text(reply)
-
     except Exception as e:
         await update.message.reply_text("عذرًا… حدث خلل مؤقت في الاتصال بالذكاء الاصطناعي. حاول مرة أخرى لاحقًا.")
         logger.error(f"خطأ في GPT: {e}")
 
-# تشغيل البوت
+# التشغيل
 def main() -> None:
     if not TELEGRAM_TOKEN or not OPENAI_KEY:
         raise ValueError("❌ تأكد من وجود TELEGRAM_BOT_TOKEN و OPENAI_API_KEY في متغيرات البيئة.")
@@ -66,9 +65,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-    user_input = input("🧠 اكتب مشاعرك أو كلمتك المفتاحية: ").strip()
-    message = responses.get(user_input, "أنا هنا معك دائمًا… فقط تحدث إلي ❤️")
-    to_number = input("📱 أدخل رقمك بصيغة دولية (مثل +966...): ").strip()
-    result = send_message(to_number, message)
-    print("📤 تم الإرسال:", result)
